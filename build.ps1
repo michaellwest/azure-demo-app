@@ -71,9 +71,13 @@ function Write-InlineProgress
     Write-Host $Host.Name
     if ($Host.Name -notlike '*ISE*')
     {
+        $setCursor = $Host.Name -notlike "*ConsoleHost*"
         if ($Stop)
         {
-            [console]::CursorVisible = $true
+            if($setCursor)
+            {
+                [console]::CursorVisible = $true
+            }
         }
         else
         {
@@ -84,15 +88,21 @@ function Write-InlineProgress
                 $host.UI.RawUI.BufferSize = $size
             }
 
-            $cursorPosition = $host.UI.RawUI.CursorPosition
-            [console]::CursorVisible = $false
+            if($setCursor)
+            {
+                $cursorPosition = $host.UI.RawUI.CursorPosition
+                [console]::CursorVisible = $false
+            }
 
             $windowWidth = [console]::WindowWidth
 
             if ($Completed)
             {
                 [console]::Write("$($Activity)$($ProgressFill * ($windowWidth - $Activity.Length))")
-                [console]::CursorVisible = $true
+                if($setCursor)
+                {
+                    [console]::CursorVisible = $true
+                }
                 [console]::WriteLine()
                 return
             }
