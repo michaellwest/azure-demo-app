@@ -68,16 +68,11 @@ function Write-InlineProgress
     )
 
     # this function only works when run from the console
-    Write-Host $Host.Name
-    if ($Host.Name -notlike '*ISE*')
+    if ($Host.Name -notlike '*ISE*' -and $Host.Name -notlike '*ConsoleHost*')
     {
-        $setCursor = $Host.Name -notlike "*ConsoleHost*"
         if ($Stop)
         {
-            if($setCursor)
-            {
-                [console]::CursorVisible = $true
-            }
+            [console]::CursorVisible = $true
         }
         else
         {
@@ -88,21 +83,15 @@ function Write-InlineProgress
                 $host.UI.RawUI.BufferSize = $size
             }
 
-            if($setCursor)
-            {
-                $cursorPosition = $host.UI.RawUI.CursorPosition
-                [console]::CursorVisible = $false
-            }
+            $cursorPosition = $host.UI.RawUI.CursorPosition
+            [console]::CursorVisible = $false
 
             $windowWidth = [console]::WindowWidth
 
             if ($Completed)
             {
                 [console]::Write("$($Activity)$($ProgressFill * ($windowWidth - $Activity.Length))")
-                if($setCursor)
-                {
-                    [console]::CursorVisible = $true
-                }
+                [console]::CursorVisible = $true
                 [console]::WriteLine()
                 return
             }
@@ -201,7 +190,7 @@ function Write-InlineProgress
     }
     else
     {
-        Write-Verbose "The progress indicator is not compatible with PowerShell ISE."
+        Write-Host "$($Activity) $($StatusMessage)"
     }
 }
 
