@@ -96,6 +96,7 @@ function Write-InlineProgress
             }
             Write-Host "Testing3"
             $cursorPosition = $host.UI.RawUI.CursorPosition
+            Write-Host "Testing 4"
             try
             {
                 [System.Console]::CursorVisible = $false
@@ -107,9 +108,9 @@ function Write-InlineProgress
                     $Global:Error.Remove($Global:Error[0])
                 }
             }
-
+            Write-Host "Testing 5"
             $windowWidth = [console]::WindowWidth
-            Write-Host "Testing 4"
+            Write-Host "Testing 6"
             if ($Completed)
             {
                 [console]::Write("$($Activity)$($ProgressFill * ($windowWidth - $Activity.Length))")
