@@ -67,64 +67,52 @@ function Write-InlineProgress
         [string] $BarBracketEnd = ']'
     )
 
-    # this function only works when run from the console
-    if ($Host.Name -notlike '*ISE*')
+    $consoleAvailable = $true
+    try
     {
-        Write-Host "Testing 1"
+        [System.Console]::CursorVisible > $null
+    }
+    catch
+    {
+        $consoleAvailable = $false
+        if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."')
+        {
+            $Global:Error.Remove($Global:Error[0])
+        }
+    }
+
+    # this function only works when run from the console
+    if ($Host.Name -notlike '*ISE*' -and $consoleAvailable)
+    {
         if ($Stop)
         {
-            try
-            {
+            try {
                 [System.Console]::CursorVisible = $true
             }
-            catch
-            {
-                if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."')
-                {
+            catch {
+                if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."') {
                     $Global:Error.Remove($Global:Error[0])
                 }
             }
         }
         else
         {
-            Write-Host "Testing 2"
             # if the buffer if full, we need to resize it to make sure that the progress bar don't break
             if (($host.UI.RawUI.CursorPosition.y + 1) -ge ($host.UI.RawUI.BufferSize.Height))
             {
                 $size = New-Object System.Management.Automation.Host.Size(($host.UI.RawUI.BufferSize.Width), (($host.UI.RawUI.BufferSize.Height + 1000)))
                 $host.UI.RawUI.BufferSize = $size
             }
-            Write-Host "Testing3"
+
             $cursorPosition = $host.UI.RawUI.CursorPosition
-            Write-Host "Testing 4"
-            try
-            {
-                [System.Console]::CursorVisible = $false
-            }
-            catch
-            {
-                if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."')
-                {
-                    $Global:Error.Remove($Global:Error[0])
-                }
-            }
-            Write-Host "Testing 5"
+            [console]::CursorVisible = $false
+
             $windowWidth = [console]::WindowWidth
-            Write-Host "Testing 6"
+
             if ($Completed)
             {
                 [console]::Write("$($Activity)$($ProgressFill * ($windowWidth - $Activity.Length))")
-                try
-                {
-                    [System.Console]::CursorVisible = $true
-                }
-                catch
-                {
-                    if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."')
-                    {
-                        $Global:Error.Remove($Global:Error[0])
-                    }
-                }
+                [console]::CursorVisible = $true
                 [console]::WriteLine()
                 return
             }
