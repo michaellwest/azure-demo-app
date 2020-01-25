@@ -70,6 +70,7 @@ function Write-InlineProgress
     # this function only works when run from the console
     if ($Host.Name -notlike '*ISE*')
     {
+        Write-Host "Testing 1"
         if ($Stop)
         {
             try
@@ -86,13 +87,14 @@ function Write-InlineProgress
         }
         else
         {
+            Write-Host "Testing 2"
             # if the buffer if full, we need to resize it to make sure that the progress bar don't break
             if (($host.UI.RawUI.CursorPosition.y + 1) -ge ($host.UI.RawUI.BufferSize.Height))
             {
                 $size = New-Object System.Management.Automation.Host.Size(($host.UI.RawUI.BufferSize.Width), (($host.UI.RawUI.BufferSize.Height + 1000)))
                 $host.UI.RawUI.BufferSize = $size
             }
-
+            Write-Host "Testing3"
             $cursorPosition = $host.UI.RawUI.CursorPosition
             try
             {
@@ -107,7 +109,7 @@ function Write-InlineProgress
             }
 
             $windowWidth = [console]::WindowWidth
-
+            Write-Host "Testing 4"
             if ($Completed)
             {
                 [console]::Write("$($Activity)$($ProgressFill * ($windowWidth - $Activity.Length))")
