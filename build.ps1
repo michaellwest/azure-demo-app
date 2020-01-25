@@ -68,11 +68,21 @@ function Write-InlineProgress
     )
 
     # this function only works when run from the console
-    if ($Host.Name -notlike '*ISE*' -and $Host.Name -notlike '*ConsoleHost*')
+    if ($Host.Name -notlike '*ISE*')
     {
         if ($Stop)
         {
-            [console]::CursorVisible = $true
+            try
+            {
+                [System.Console]::CursorVisible = $true
+            }
+            catch
+            {
+                if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."')
+                {
+                    $Global:Error.Remove($Global:Error[0])
+                }
+            }
         }
         else
         {
@@ -84,14 +94,34 @@ function Write-InlineProgress
             }
 
             $cursorPosition = $host.UI.RawUI.CursorPosition
-            [console]::CursorVisible = $false
+            try
+            {
+                [System.Console]::CursorVisible = $false
+            }
+            catch
+            {
+                if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."')
+                {
+                    $Global:Error.Remove($Global:Error[0])
+                }
+            }
 
             $windowWidth = [console]::WindowWidth
 
             if ($Completed)
             {
                 [console]::Write("$($Activity)$($ProgressFill * ($windowWidth - $Activity.Length))")
-                [console]::CursorVisible = $true
+                try
+                {
+                    [System.Console]::CursorVisible = $true
+                }
+                catch
+                {
+                    if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."')
+                    {
+                        $Global:Error.Remove($Global:Error[0])
+                    }
+                }
                 [console]::WriteLine()
                 return
             }
