@@ -86,14 +86,7 @@ function Write-InlineProgress
     {
         if ($Stop)
         {
-            try {
-                [System.Console]::CursorVisible = $true
-            }
-            catch {
-                if ($Error[0].Exception.Message -eq 'Exception setting "CursorVisible": "The handle is invalid."') {
-                    $Global:Error.Remove($Global:Error[0])
-                }
-            }
+            [System.Console]::CursorVisible = $true
         }
         else
         {
@@ -247,73 +240,60 @@ function Invoke-FileDownload
     param(
         [string]$Url,
         [string]$Path,
-        [System.Net.CookieContainer]$Cookies
+        [System.Net.CookieContainer]$Cookies,
+        [int]$Timeout = 15000
     )
 
-    Add-Type -AssemblyName System.Net.Http
-    $handler = New-Object System.Net.Http.HttpClientHandler
+    $uri = [uri]::new($url)
+    $request = [System.Net.HttpWebRequest]::Create($uri)
+    $request.Timeout = $Timeout
+
     if ($cookies)
     {
-        $handler.UseCookies = $true
-        $handler.CookieContainer = $cookies
+        $request.CookieContainer = $cookies
     }
-    $client = New-Object -TypeName System.Net.Http.Httpclient $handler
 
-    $task = $client.GetAsync($Url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead)
-    $task.Wait()
-
-    $response = $task.Result
-    $response.EnsureSuccessStatusCode() > $null
-    $dispositionHeader = $response.Content.Headers.ContentDisposition
-    $disposition = [System.Net.Mime.ContentDisposition]::new($dispositionHeader)
-    $filename = $disposition.FileName
-    $downloadPath = $Path #Join-Path -Path $path -ChildPath $fileName
-    $totalBytes = $response.Content.Headers.ContentLength
-
-    $readTask = $response.Content.ReadAsStreamAsync()
-    $readTask.Wait()
-    $contentStream = $readTask.Result
-
+    $downloadPath = $Path
+    $hasMoreToRead = $true
+    $buffer = New-Object byte[] 10KB
     [long]$totalBytesRead = 0
     [long]$readCount = 0
-    [byte[]]$buffer = [byte[]]::CreateInstance([byte], 8192)
-    $hasMoreToRead = $true
 
     try
     {
-        $fileStream = [System.IO.FileStream]::new($downloadPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite, 8192, $true)
+        $response = $request.GetResponse()
+        $totalBytes = [System.Math]::Floor($response.ContentLength)
+        $responseStream = $response.GetResponseStream()
+        $fileStream = [System.IO.FileStream]::new($downloadPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write, [System.IO.FileShare]::ReadWrite, 10KB, $true)
+
         do
         {
-            $contentTask = $contentStream.ReadAsync($buffer, 0, $buffer.Length)
-            $contentTask.Wait()
-            $bytesRead = $contentTask.Result
+            $bytesRead = $responseStream.Read($buffer, 0, $buffer.length)
             if ($bytesRead -eq 0)
             {
                 $hasMoreToRead = $false
                 continue
             }
 
-            $fileStream.WriteAsync($buffer, 0, $bytesRead) > $null
+            $fileStream.Write($buffer, 0, $bytesRead)
             $totalBytesRead += $bytesRead
             $readCount += 1
 
             if ($readCount % 100 -eq 0)
             {
                 $percentComplete = ($totalBytesRead / $totalBytes * 100)
-                #Write-Progress -Activity "Downloading $($filename)" -Status "Downloaded $([math]::round($totalBytesRead /1MB, 0)) MB of $([math]::round($totalBytes /1MB, 0)) MB" -PercentComplete ($totalBytesRead / $totalBytes * 100)
-                Write-InlineProgress -Activity "Downloading" -PercentComplete $percentComplete -StatusMessage "$([math]::round($totalBytesRead /1MB, 0))MB / $([math]::round($totalBytes /1MB, 0))MB"
+                Write-InlineProgress -Activity "Downloading" -PercentComplete $percentComplete -StatusMessage "$([math]::round($totalBytesRead /1MB, 2))MB / $([math]::round($totalBytes /1MB, 2))MB"
             }
         }
         while ($hasMoreToRead)
 
-        #Write-Progress -Activity "Download complete." -Status "Finishing up" -Completed
         Write-InlineProgress -Activity "Download complete" -Completed
     }
     finally
     {
-        $contentStream.Dispose()
+        $fileStream.Flush()
         $fileStream.Close()
         $fileStream.Dispose()
-        $client.Dispose()
+        $responseStream.Dispose()
     }
 }
